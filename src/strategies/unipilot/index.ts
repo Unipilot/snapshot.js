@@ -58,8 +58,6 @@ export async function strategy(
     })
   );
 
-  console.log('reserves', reserves);
-
   const score = {};
   addresses.forEach((address, idx) => {
     score[address] = reserves[idx].token0Reserve;
