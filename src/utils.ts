@@ -5,9 +5,18 @@ import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { jsonToGraphQLQuery } from 'json-to-graphql-query';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
+import _strategies from './strategies';
 import Multicaller from './utils/multicaller';
 import getProvider from './utils/provider';
 import validations from './validations';
+import {
+  decodeContenthash,
+  validateContent,
+  isValidContenthash,
+  encodeContenthash,
+  resolveENSContentHash,
+  resolveContent
+} from './utils/contentHash';
 import { signMessage, getBlockNumber } from './utils/web3';
 import { getHash, verify } from './sign/utils';
 import gateways from './gateways.json';
@@ -141,6 +150,37 @@ export async function getScores(
   }
 }
 
+export async function getScoresDirect(
+  space: string,
+  strategies: any[],
+  network: string,
+  provider,
+  addresses: string[],
+  snapshot: number | string = 'latest'
+) {
+  try {
+    return await Promise.all(
+      strategies.map((strategy) =>
+        (snapshot !== 'latest' && strategy.params?.start > snapshot) ||
+        (strategy.params?.end &&
+          (snapshot === 'latest' || snapshot > strategy.params?.end)) ||
+        addresses.length === 0
+          ? {}
+          : _strategies[strategy.name](
+              space,
+              network,
+              provider,
+              addresses,
+              strategy.params,
+              snapshot
+            )
+      )
+    );
+  } catch (e) {
+    return Promise.reject(e);
+  }
+}
+
 export function validateSchema(schema, data) {
   const ajv = new Ajv({ allErrors: true, allowUnionTypes: true, $data: true });
   // @ts-ignore
@@ -157,8 +197,15 @@ export default {
   ipfsGet,
   sendTransaction,
   getScores,
+  getScoresDirect,
   validateSchema,
   getProvider,
+  decodeContenthash,
+  validateContent,
+  isValidContenthash,
+  encodeContenthash,
+  resolveENSContentHash,
+  resolveContent,
   signMessage,
   getBlockNumber,
   Multicaller,
